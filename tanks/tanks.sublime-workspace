@@ -1,0 +1,199 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+		]
+	},
+	"buffers":
+	[
+	],
+	"build_system": "",
+	"build_system_choices":
+	[
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 67.0,
+		"last_filter": "package install",
+		"selected_items":
+		[
+			[
+				"package install",
+				"Package Control: Install Package"
+			],
+			[
+				"PACKAGE INST",
+				"Package Control: Install Package"
+			]
+		],
+		"width": 575.0
+	},
+	"console":
+	{
+		"height": 0.0,
+		"history":
+		[
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"expanded_folders":
+	[
+		"/Users/michaelmunsie/Documents/repos/tanks"
+	],
+	"file_history":
+	[
+		"/Users/michaelmunsie/Documents/repos/tanks/index.html",
+		"/Users/michaelmunsie/Documents/minecraftServer/world-1/server.properties",
+		"/Users/michaelmunsie/Documents/startServer.sh",
+		"/Users/michaelmunsie/Documents/minecraftServer/world-1/eula.txt",
+		"/Users/michaelmunsie/Documents/servers/munstrocity.com/app/views/code/2015-04-07-structuring-gulpjs-files.dust",
+		"/Users/michaelmunsie/Documents/servers/createProject.sh",
+		"/Users/michaelmunsie/Documents/servers/munstrocity.com/app/views/code/2015-04-07-gulp-is-awesome.dust",
+		"/Users/michaelmunsie/Documents/servers/munstrocity.com/app/public/commonJS/site.js",
+		"/Users/michaelmunsie/Documents/servers/start.sh",
+		"/Users/michaelmunsie/Documents/servers/stop.sh",
+		"/Users/michaelmunsie/Documents/servers/budgeteer.com/.gitignore",
+		"/Users/michaelmunsie/Documents/servers/removeProject.sh",
+		"/Users/michaelmunsie/.ssh/id_rsa.pub",
+		"/Users/michaelmunsie/Documents/servers/munstrocity.com/.gitignore",
+		"/Users/michaelmunsie/Documents/servers/munstrocity.com/stop.sh",
+		"/Users/michaelmunsie/Documents/servers/munstrocity.com/start.sh",
+		"/Users/michaelmunsie/Documents/servers/budgeteer.com/stop.sh",
+		"/Users/michaelmunsie/Documents/servers/budgeteer.com/start.sh",
+		"/Users/michaelmunsie/Documents/servers/_createProject.sh"
+	],
+	"find":
+	{
+		"height": 26.0
+	},
+	"find_in_files":
+	{
+		"height": 0.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+			"sitance",
+			"gulpjs",
+			"GulpJS",
+			"\""
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"sheets":
+			[
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 26.0
+	},
+	"input":
+	{
+		"height": 34.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"pinned_build_system": "",
+	"project": "tanks.sublime-project",
+	"replace":
+	{
+		"height": 48.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_symbol":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": false,
+	"show_open_files": false,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 346.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}

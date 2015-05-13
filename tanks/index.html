@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Tanks!</title>
+  <style>
+  * {
+    margin: 0;
+  }
+  body, html {
+    height: 100%;
+    width: 100%;
+  }
+  </style>
+</head>
+<body>
+  <canvas style="height: 100%; width: 100%" id="canvas" width="640" height="480"></canvas>
+  <script src="ext/lodash.js"></script>
+  <script>
+  
+  var ctx = document.getElementById('canvas').getContext('2d');
+
+  var images = {
+    ball: createImage("images/ball.png"),
+    orb: createImage("images/orb.png")
+  };
+  
+  var playfield_width = 640;
+  var playfield_height = 480;
+  var sprites = [];
+
+  var ballToFollow = new Ball();
+  var orb = new OrbFollow(ballToFollow);
+
+  draw();
+
+  function createImage(src) {
+    var image = new Image();
+    image.src = src;
+    return image;
+  }
+
+  function draw() {
+    ctx.clearRect(0,0,640,480);
+    _.each(sprites, function(sprite) {
+      sprite.engine();
+      ctx.drawImage(sprite.image,sprite.x,sprite.y,sprite.width,sprite.height);
+    });
+
+    window.requestAnimationFrame(draw);
+  }
+
+  function prob() {
+    var num = Math.floor(Math.random() * 2) + 1;
+    if (num === 1) {
+      return -1;
+    }
+    return 1;
+  }
+
+  function Ball() {
+
+    var sprite = new Sprite({
+      image: images.ball,
+      x: Math.floor(Math.random() * playfield_width - 20)+20,
+      y: Math.floor(Math.random() * playfield_height - 20)+20,
+      width: 20,
+      height: 20,
+      xdir: prob() * (Math.floor(Math.random() * 10) + 1),
+      ydir: prob() * (Math.floor(Math.random() * 10) + 1),
+      engine: engine
+    });
+
+    function engine() {
+      if (sprite.x+sprite.width >= playfield_width) {
+        sprite.xdir = -sprite.xdir;
+      }
+      if (sprite.x < 0) {
+        sprite.xdir = -sprite.xdir;
+      }
+      if (sprite.y+sprite.height >= playfield_height) {
+        sprite.ydir = -sprite.ydir;
+      }
+      if (sprite.y < 0) {
+        sprite.ydir = -sprite.ydir;
+      }
+      sprite.x += sprite.xdir;
+      sprite.y += sprite.ydir;
+    }
+
+    return sprite;
+
+  }
+
+  function OrbFollow(leader) {
+
+    var sprite = new Sprite({
+      image: images.orb,
+      xoffset: Math.floor(Math.random() * playfield_width - 20)+20,
+      yoffset: Math.floor(Math.random() * playfield_height - 20)+20,
+      width: 20,
+      height: 20,
+      radius: 30,
+      deg: 0,
+      deg_speed: .03,
+      engine: engine
+    });
+
+    function engine() {
+      sprite.deg+=sprite.deg_speed;
+      if (sprite.deg >= 360) {
+        sprite.deg = 0;
+      }
+      sprite.x = (Math.sin(sprite.deg) * sprite.radius) + leader.x;
+      sprite.y = (Math.cos(sprite.deg) * sprite.radius) + leader.y;
+    }
+
+    return sprite;
+
+  }
+
+  function Sprite(obj) {
+    _.extend(this, {
+      x: 0,
+      y: 0,
+      xdir: 0,
+      ydir: 0,
+      xoffset: 0,
+      yoffset: 0,
+      deg: 0,
+      deg_speed: 0,
+      radius: 0,
+      width: 0,
+      height: 0,
+      image: null,
+      engine: null
+    });
+    if (obj) {
+      _.extend(this, obj);
+    }
+    sprites.push(this);
+  }
+
+</script>
+</body>
+</html>
