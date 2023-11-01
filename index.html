@@ -1,0 +1,1686 @@
+<html>
+<body bgcolor="black" text="white" onResize="reconstruct_arena()">
+<style>
+body {
+ overflow:hidden;
+}
+</style>
+<table width="100%" height="100%" cellspacing="0" cellpadding="3" bordercolor="#555555" border="5">
+ <tr>
+  <td>
+   <table cellspacing="0" cellpadding="0" width="100%" bgcolor="#000000">
+    <tr>
+     <td height="60" width="200">
+      <img src="images/title.jpg">
+     </td>
+     <td align="center">
+      <font style="font-family:verdana;font-size:11px;">Press <b>[n]</b> for new game</font>
+     </td>
+     <td align="right" width="200">
+      <table>
+       <tr>
+        <td>
+        <font style="font-family:verdana;font-size:12px">Player 1:</td><td><font style="font-family:verdana;font-size:12px"><div id="player1">100%</div></td>
+       </tr>
+       <tr>
+        <td>
+        <font style="font-family:verdana;font-size:12px">Player 2:</td><td><font style="font-family:verdana;font-size:12px"><div id="player2">100%</div></td>
+       </tr>
+      </table>
+     </td>
+    </tr>
+   </table>
+   <center>
+   <div id="spritefield" style="background:url('images/background.jpg');position:relative;"></div>
+   </center>
+  </td>
+ </tr>
+</table>
+<div id="overlay2" style="position:absolute;width:100%;height:100%"></div>
+<div id="overlay" style="position:absolute;width:100%;height:100%;opacity:0.1"></div>
+<script language="JavaScript">
+
+// Tanks Demo (By Michael Munsie)
+
+var round = 0;
+
+var key_pressed = 0;
+var frame_rate = 1000/30;
+
+var playfield_width = document.body.clientWidth-32;
+var playfield_height = document.body.clientHeight-32*3;
+
+while (playfield_width % 32 != 0) { playfield_width--; }
+while (playfield_height % 32 != 0) { playfield_height--; }
+
+
+var sprite_total = 70; // 5 bullets each
+var sprite_width = 32;
+var sprite_height = 32;
+
+var special_health = 200;
+
+var fire_speed = 32;
+
+var sprites = new Array(sprite_total);
+
+// *-*-*-*-*-*-*-*-*-*-*-
+// IMAGES
+// *-*-*-*-*-*-*-*-*-*-*-
+
+var tank1_left = new Image();
+tank1_left.src = "images/p1_left.gif"
+var tank1_right = new Image();
+tank1_right.src = "images/p1_right.gif"
+var tank1_up = new Image();
+tank1_up.src = "images/p1_up.gif"
+var tank1_down = new Image();
+tank1_down.src = "images/p1_down.gif"
+
+var tank2_left = new Image();
+tank2_left.src = "images/p2_left.gif"
+var tank2_right = new Image();
+tank2_right.src = "images/p2_right.gif"
+var tank2_up = new Image();
+tank2_up.src = "images/p2_up.gif"
+var tank2_down = new Image();
+tank2_down.src = "images/p2_down.gif"
+
+var p1_fire = new Image();
+p1_fire.src = "images/p1_fire.gif";
+var p2_fire = new Image();
+p2_fire.src = "images/p2_fire.gif";
+
+var p1_haswall = new Image();
+p1_haswall.src = "images/p1_haswall.gif";
+
+var p2_haswall = new Image();
+p2_haswall.src = "images/p2_haswall.gif";
+
+var p1_ouch = new Image();
+p1_ouch.src = "images/p1_ouch.gif";
+
+var p2_ouch = new Image();
+p2_ouch.src = "images/p2_ouch.gif";
+
+var p1_special = new Image();
+p1_special.src = "images/p1_special.gif";
+
+var p2_special = new Image();
+p2_special.src = "images/p2_special.gif";
+
+var wall = new Image();
+wall.src = "images/wall.gif";
+
+var explode = new Image();
+explode.src = "images/explode.gif";
+
+// ------------------------
+// Write Sprites to screen
+// ------------------------
+
+function sprite() {
+
+ this.x = 0;
+ this.y = 0;
+ this.flag = -1;
+ this.width = 32;
+ this.height = 32;
+ this.xdir = 0;
+ this.ydir = 0;
+ this.imglayer = null;
+ this.health = 0;
+ this.fire_counter = 0;
+ this.can_firecounter = 0;
+ this.movement_type = 0;
+ this.degree = 0;
+ this.firepower = 0;
+ this.orbit_width = 0;
+ this.orbit_height = 0;
+
+}
+
+var sprite_htmlstr = "";
+
+for (x=0;x<sprite_total;x++) {
+
+ sprites[x] = new sprite();
+
+ sprite_htmlstr+= "<img src='' id='sprite" + x + "' style='position:absolute;top:" + sprites[x].x + ";left:" + sprites[x].y + ";opacity:" + sprites[x].opacity + ";'>"
+
+}
+
+sprite_htmlstr+="<img src='images/desructionarea.jpg' id='destructionarea' style='position:absolute;opacity:.4'>";
+
+document.all.spritefield.innerHTML = sprite_htmlstr;
+document.all.spritefield.style.width = playfield_width;
+document.all.spritefield.style.height = playfield_height;
+document.all.overlay.style.top = -playfield_height/40;
+document.all.overlay2.style.top = -playfield_height/40;
+
+for (x=0;x<sprite_total;x++) {
+
+ str = "sprite" + x + "";
+
+ sprites[x].imglayer = document.all[str]
+
+ if (x > 9) { sprites[x].flag = 0; sprites[x].imglayer.src = wall.src; }
+
+}
+
+// ()()()()()()()()()()()()()
+// DECLARE IT!
+// ()()()()()()()()()()()()()
+
+// Sprites 2-4 are bullets for p1
+// Sprites 5-7 are bullets for p2
+
+var player1 = sprites[0];
+var player2 = sprites[1];
+
+player1.x = Math.floor(Math.random() * playfield_width/32) * 32;
+player1.y = Math.floor(Math.random() * playfield_height/32) * 32;
+player1.imglayer.src = tank1_right.src;
+player1.flag = 0;
+player1.health = 100;
+player1.firepower = 5;
+
+player2.flag = 0;
+player2.x = Math.floor(Math.random() * playfield_width/32) * 32;
+player2.y = Math.floor(Math.random() * playfield_height/32) * 32;
+player2.imglayer.src = tank2_right.src;
+player2.health = 100;
+player2.firepower = 5;
+
+
+while (player1.x == player2.x || player1.y == player2.y) {
+ player2.x = Math.floor(Math.random() * playfield_width/32) * 32;
+ player2.y = Math.floor(Math.random() * playfield_height/32) * 32;
+}
+
+player1.xdir = 32;
+player1.ydir = 32;
+player2.xdir = 32;
+player2.ydir = 32;
+
+
+// ()()()()()()()()()()()()()
+// BUILD WALLS
+// ()()()()()()()()()()()()()
+
+construct_walls();
+
+// ------------------------
+// Universal Routines
+// -------------------------
+
+function collision_check(sprite1,sprite2) {
+
+ var collision = false;
+
+ if (sprite1.x+sprite1.width > sprite2.x) {
+  if (sprite1.x < sprite2.x+sprite2.width) {
+   if (sprite1.y+sprite1.height > sprite2.y) {
+    if (sprite1.y < sprite2.y+sprite2.height) {
+	 if (sprite2.flag != 20) {
+      collision = true;
+	 }
+    }
+   }
+  }
+ }
+
+ return collision;
+
+}
+
+function get_keys() { 
+
+ key_pressed = window.event.keyCode; 
+ if (key_pressed == 0) { key_pressed = "mouse"; }
+ if (key_pressed == 78) { new_game(); }
+
+}
+
+function check_keys() {
+
+ switch (key_pressed) {
+  case 38: p1_moveup(); break;
+  case 39: p1_moveright(); break;
+  case 37: p1_moveleft(); break;
+  case 40: p1_movedown(); break;
+  case "mouse": p1_shoot(); break;
+  case 87: p2_moveup(); break;
+  case 68: p2_moveright(); break;
+  case 65: p2_moveleft(); break;
+  case 83: p2_movedown(); break;
+  case 32: p2_shoot(); break;
+ }
+
+}
+
+
+// ********************************************************
+// ********************************************************
+// ********************************************************
+
+// ------------------------
+// Player 1 Routines
+// -------------------------
+
+function p1_shoot() {
+
+ switch (player1.imglayer.src) {
+  case tank1_left.src:  p1_fireatdirection('left'); break;
+  case tank1_right.src: p1_fireatdirection('right'); break;
+  case tank1_up.src:    p1_fireatdirection('up'); break;
+  case tank1_down.src:  p1_fireatdirection('down'); break;
+ }
+
+}
+
+function p1_fireatdirection(direction) {
+
+ player1.can_firecounter++;
+
+ if (player1.can_firecounter == 1) { 
+  
+  player1.can_firecounter = 0;
+
+  player1.fire_counter++;
+
+  if (player1.fire_counter > 3) { player1.fire_counter = 0; }
+
+  if (sprites[2+player1.fire_counter].flag == -1) { 
+
+   if (direction == "up") {
+   
+    if (player1.health >= special_health || (round%3 == 0 && round > 0)) {
+
+     sprites[2+player1.fire_counter].x = player1.x-150
+     sprites[2+player1.fire_counter].y = player1.y-90
+     sprites[2+player1.fire_counter].xdir=0;
+     sprites[2+player1.fire_counter].ydir=-fire_speed;
+     sprites[2+player1.fire_counter].movement_type = 10;
+     sprites[2+player1.fire_counter].flag = 0; 
+     sprites[2+player1.fire_counter].imglayer.src = p1_special.src;
+     sprites[2+player1.fire_counter].width = 300;  
+     sprites[2+player1.fire_counter].height = 225;
+     sprites[2+player1.fire_counter].health = 2;
+	  
+    }
+
+    else {
+
+     sprites[2+player1.fire_counter].x = player1.x
+     sprites[2+player1.fire_counter].y = player1.y
+     sprites[2+player1.fire_counter].xdir=0;
+     sprites[2+player1.fire_counter].ydir=-fire_speed;
+     sprites[2+player1.fire_counter].movement_type = 1;
+     sprites[2+player1.fire_counter].flag = 0; 
+     sprites[2+player1.fire_counter].imglayer.src = p1_fire.src;
+     sprites[2+player1.fire_counter].health = 2;
+     sprites[2+player1.fire_counter].width = 32;  
+     sprites[2+player1.fire_counter].height = 32;
+
+    }
+   }
+
+   if (direction == "down") {
+
+    if (player1.health >= special_health || (round%3 == 0 && round > 0)) {
+
+     sprites[2+player1.fire_counter].x = player1.x-150
+     sprites[2+player1.fire_counter].y = player1.y-90
+     sprites[2+player1.fire_counter].xdir=0;
+     sprites[2+player1.fire_counter].ydir=fire_speed;
+     sprites[2+player1.fire_counter].movement_type = 10;
+     sprites[2+player1.fire_counter].flag = 0; 
+     sprites[2+player1.fire_counter].imglayer.src = p1_special.src;
+     sprites[2+player1.fire_counter].width = 300;  
+     sprites[2+player1.fire_counter].height = 225;
+     sprites[2+player1.fire_counter].health = 2;
+
+    }
+
+    else {
+   
+     sprites[2+player1.fire_counter].x = player1.x
+     sprites[2+player1.fire_counter].y = player1.y
+     sprites[2+player1.fire_counter].xdir=0;
+     sprites[2+player1.fire_counter].ydir=fire_speed;
+     sprites[2+player1.fire_counter].movement_type = 1;
+     sprites[2+player1.fire_counter].flag = 0;
+     sprites[2+player1.fire_counter].imglayer.src = p1_fire.src;
+     sprites[2+player1.fire_counter].health = 2;
+     sprites[2+player1.fire_counter].width = 32;  
+     sprites[2+player1.fire_counter].height = 32;
+
+    }
+   }
+  
+   if (direction == "left") {
+
+    if (player1.health >= special_health || (round%3 == 0 && round > 0)) {
+    
+     sprites[2+player1.fire_counter].x = player1.x-150
+     sprites[2+player1.fire_counter].y = player1.y-90
+     sprites[2+player1.fire_counter].xdir=-fire_speed;
+     sprites[2+player1.fire_counter].ydir=0;
+     sprites[2+player1.fire_counter].movement_type = 10;
+     sprites[2+player1.fire_counter].flag = 0; 
+     sprites[2+player1.fire_counter].imglayer.src = p1_special.src;
+     sprites[2+player1.fire_counter].width = 300;  
+     sprites[2+player1.fire_counter].height = 225;
+     sprites[2+player1.fire_counter].health = 2;
+	 
+    }
+
+    else {
+
+     sprites[2+player1.fire_counter].x = player1.x
+     sprites[2+player1.fire_counter].y = player1.y
+     sprites[2+player1.fire_counter].xdir=-fire_speed;
+     sprites[2+player1.fire_counter].ydir=0;
+     sprites[2+player1.fire_counter].movement_type = 1;
+     sprites[2+player1.fire_counter].flag = 0;
+     sprites[2+player1.fire_counter].imglayer.src = p1_fire.src;
+     sprites[2+player1.fire_counter].health = 2;
+     sprites[2+player1.fire_counter].width = 32;  
+     sprites[2+player1.fire_counter].height = 32;
+  
+    }
+   }
+
+   if (direction == "right") {
+   
+    if (player1.health >= special_health || (round%3 == 0 && round > 0)) {
+    
+     sprites[2+player1.fire_counter].x = player1.x-150
+     sprites[2+player1.fire_counter].y = player1.y-90
+     sprites[2+player1.fire_counter].xdir=fire_speed;
+     sprites[2+player1.fire_counter].ydir=0;
+     sprites[2+player1.fire_counter].movement_type = 10;
+     sprites[2+player1.fire_counter].flag = 0; 
+     sprites[2+player1.fire_counter].imglayer.src = p1_special.src;
+     sprites[2+player1.fire_counter].width = 300;  
+     sprites[2+player1.fire_counter].height = 225;
+     sprites[2+player1.fire_counter].health = 2;
+    
+    }
+
+    else {
+
+     sprites[2+player1.fire_counter].x = player1.x
+     sprites[2+player1.fire_counter].y = player1.y
+     sprites[2+player1.fire_counter].xdir=fire_speed;
+     sprites[2+player1.fire_counter].ydir=0;
+     sprites[2+player1.fire_counter].movement_type = 1;
+     sprites[2+player1.fire_counter].flag = 0;
+     sprites[2+player1.fire_counter].imglayer.src = p1_fire.src;
+     sprites[2+player1.fire_counter].health = 2;
+     sprites[2+player1.fire_counter].width = 32;  
+     sprites[2+player1.fire_counter].height = 32;
+
+    }
+   }
+
+   if (player1.health < special_health && player1.x > (playfield_width/2)-50) {
+    if (player1.x < (playfield_width/2)+50) {
+     if (player1.y > (playfield_height/2)-50) {
+      if (player1.y < (playfield_height/2)+50) {
+       sprites[2+player1.fire_counter].movement_type = 4;
+       sprites[2+player1.fire_counter].orbit_width = 0;
+       sprites[2+player1.fire_counter].orbit_height = 0;
+       sprites[2+player1.fire_counter].degree=Math.floor(Math.random() * 360); 
+      }
+     }
+    }
+   }
+  }  
+ }
+}
+
+function p1_moveup() {
+
+ player1.y-=player1.ydir;
+ 
+ for (x=10;x<sprite_total;x++) {
+
+  if (collision_check(player1,sprites[x])) { 
+    sprites[x].y-=32;
+  }
+
+   // 2nd layer
+
+   for (y=10;y<sprite_total;y++) {
+    if (y != x) {
+     if (collision_check(sprites[x],sprites[y])) {
+      sprites[y].y-=32;
+
+      // 3rd layer
+
+      for (z=10;z<sprite_total;z++) {
+       if (z != y ) {     
+        if (collision_check(sprites[y],sprites[z])) {
+         sprites[z].y-=32;
+
+         // 4th layer
+         
+         for (a=10;a<sprite_total;a++) {
+          if (a != z) {
+           if (collision_check(sprites[z],sprites[a])) {
+	    sprites[a].y-=32; 
+
+            // 5th layer
+
+            for (b=10;b<sprite_total;b++) {
+             if (b != a) {
+              if (collision_check(sprites[a],sprites[b])) {
+               sprites[b].y-=32;
+
+               // 6th Layer
+               
+               for (c=10;c<sprite_total;c++) {
+                if (c != b) {
+                 if (collision_check(sprites[b],sprites[c])) {
+                  sprites[c].y-=32;
+
+                 }
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  
+ }
+
+ if (collision_check(player1,player2) || player1.y < 0) { player1.y+=player1.ydir; }
+ else { player1.imglayer.src = tank1_up.src; }
+
+}
+
+function p1_movedown() {
+
+ player1.y+=player1.ydir;
+
+ for (x=10;x<sprite_total;x++) {
+  if (collision_check(player1,sprites[x])) { 
+   sprites[x].y+=32;
+
+   // 2nd layer
+
+   for (y=10;y<sprite_total;y++) {
+    if (y != x) {
+     if (collision_check(sprites[x],sprites[y])) {
+      sprites[y].y+=32;
+
+      // 3rd layer
+
+      for (z=10;z<sprite_total;z++) {
+       if (z != y ) {     
+        if (collision_check(sprites[y],sprites[z])) {
+         sprites[z].y+=32;
+
+         // 4th layer
+         
+         for (a=10;a<sprite_total;a++) {
+          if (a != z) {
+           if (collision_check(sprites[z],sprites[a])) {
+	    sprites[a].y+=32; 
+
+            // 5th layer
+
+            for (b=10;b<sprite_total;b++) {
+             if (b != a) {
+              if (collision_check(sprites[a],sprites[b])) {
+               sprites[b].y+=32;
+
+               // 6th Layer
+               
+               for (c=10;c<sprite_total;c++) {
+                if (c != b) {
+                 if (collision_check(sprites[b],sprites[c])) {
+                  sprites[c].y+=32;
+
+                 }
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+
+ if (collision_check(player1,player2) || player1.y+player1.height > playfield_height) { player1.y-=player1.ydir; }
+ else { player1.imglayer.src = tank1_down.src; }
+
+
+}
+
+function p1_moveright() {
+
+ player1.x+=player1.xdir;
+
+ for (x=10;x<sprite_total;x++) {
+  if (collision_check(player1,sprites[x])) { 
+   sprites[x].x+=32; 
+
+   // 2nd layer
+
+   for (y=10;y<sprite_total;y++) {
+    if (y != x) {
+     if (collision_check(sprites[x],sprites[y])) {
+      sprites[y].x+=32; 
+
+      // 3rd layer
+
+      for (z=10;z<sprite_total;z++) {
+       if (z != y ) {     
+        if (collision_check(sprites[y],sprites[z])) {
+         sprites[z].x+=32; 
+
+         // 4th layer
+         
+         for (a=10;a<sprite_total;a++) {
+          if (a != z) {
+           if (collision_check(sprites[z],sprites[a])) {
+	    sprites[a].x+=32;  
+
+            // 5th layer
+
+            for (b=10;b<sprite_total;b++) {
+             if (b != a) {
+              if (collision_check(sprites[a],sprites[b])) {
+               sprites[b].x+=32; 
+
+               // 6th Layer
+               
+               for (c=10;c<sprite_total;c++) {
+                if (c != b) {
+                 if (collision_check(sprites[b],sprites[c])) {
+                  sprites[c].x+=32; 
+
+                 }
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+
+ if (collision_check(player1,player2) || player1.x+player1.width > playfield_width) { player1.x-=player1.xdir; }
+ else { player1.imglayer.src = tank1_right.src; }
+
+}
+
+function p1_moveleft() {
+
+ player1.x-=player1.xdir;
+
+ for (x=10;x<sprite_total;x++) {
+  if (collision_check(player1,sprites[x])) { 
+   sprites[x].x-=32;
+
+   // 2nd layer
+
+   for (y=10;y<sprite_total;y++) {
+    if (y != x) {
+     if (collision_check(sprites[x],sprites[y])) {
+      sprites[y].x-=32; 
+
+      // 3rd layer
+
+      for (z=10;z<sprite_total;z++) {
+       if (z != y ) {     
+        if (collision_check(sprites[y],sprites[z])) {
+         sprites[z].x-=32; 
+
+         // 4th layer
+         
+         for (a=10;a<sprite_total;a++) {
+          if (a != z) {
+           if (collision_check(sprites[z],sprites[a])) {
+	    sprites[a].x-=32;  
+
+            // 5th layer
+
+            for (b=10;b<sprite_total;b++) {
+             if (b != a) {
+              if (collision_check(sprites[a],sprites[b])) {
+               sprites[b].x-=32; 
+
+               // 6th Layer
+               
+               for (c=10;c<sprite_total;c++) {
+                if (c != b) {
+                 if (collision_check(sprites[b],sprites[c])) {
+                  sprites[c].x-=32; 
+
+                 }
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+
+ if (collision_check(player1,player2) || player1.x < 0) { player1.x+=player1.xdir; }
+ else { player1.imglayer.src = tank1_left.src; }
+
+}
+
+// ------------------------
+// Player 2 Routines
+// -------------------------
+
+
+function p2_shoot() {
+
+ switch (player2.imglayer.src) {
+  case tank2_left.src:  p2_fireatdirection('left'); break;
+  case tank2_right.src: p2_fireatdirection('right'); break;
+  case tank2_up.src:    p2_fireatdirection('up'); break;
+  case tank2_down.src:  p2_fireatdirection('down'); break;
+ }
+
+}
+
+function p2_fireatdirection(direction) {
+
+ player2.can_firecounter++;
+
+ if (player2.can_firecounter == 1) { 
+  
+  player2.can_firecounter = 0;
+
+  player2.fire_counter++;
+
+  if (player2.fire_counter > 3) { player2.fire_counter = 0; }
+
+  if (sprites[6+player2.fire_counter].flag == -1) {
+
+   if (direction == "up") {
+   
+     if (player2.health >= special_health || (round%3 == 0 && round > 0)) {
+
+      sprites[6+player2.fire_counter].x = player2.x-150
+      sprites[6+player2.fire_counter].y = player2.y-90
+      sprites[6+player2.fire_counter].xdir=0;
+      sprites[6+player2.fire_counter].ydir=-fire_speed;
+      sprites[6+player2.fire_counter].movement_type = 11;
+      sprites[6+player2.fire_counter].flag = 0; 
+      sprites[6+player2.fire_counter].imglayer.src = p2_special.src;
+      sprites[6+player2.fire_counter].width = 300;
+      sprites[6+player2.fire_counter].height = 225;
+      sprites[6+player2.fire_counter].health = 2;
+	  
+     }
+
+     else {
+
+      sprites[6+player2.fire_counter].x = player2.x
+      sprites[6+player2.fire_counter].y = player2.y
+      sprites[6+player2.fire_counter].xdir=0;
+      sprites[6+player2.fire_counter].ydir=-fire_speed;
+      sprites[6+player2.fire_counter].movement_type = 2;
+      sprites[6+player2.fire_counter].flag = 0; 
+      sprites[6+player2.fire_counter].imglayer.src = p2_fire.src;
+      sprites[6+player2.fire_counter].health = 2;
+      sprites[6+player2.fire_counter].width = 32;
+      sprites[6+player2.fire_counter].height = 32;
+    
+    }
+   }
+
+   if (direction == "down") {
+
+    if (player2.health >= special_health || (round%3 ==0 && round >0)) {
+
+     sprites[6+player2.fire_counter].x = player2.x-150
+     sprites[6+player2.fire_counter].y = player2.y-90
+     sprites[6+player2.fire_counter].xdir=0;
+     sprites[6+player2.fire_counter].ydir=fire_speed;
+     sprites[6+player2.fire_counter].movement_type = 11;
+     sprites[6+player2.fire_counter].flag = 0; 
+     sprites[6+player2.fire_counter].imglayer.src = p2_special.src;
+     sprites[6+player2.fire_counter].width = 300;
+     sprites[6+player2.fire_counter].height = 225;
+     sprites[6+player2.fire_counter].health = 2;
+
+    }
+
+    else {
+
+     sprites[6+player2.fire_counter].x = player2.x
+     sprites[6+player2.fire_counter].y = player2.y
+     sprites[6+player2.fire_counter].xdir=0;
+     sprites[6+player2.fire_counter].ydir=fire_speed;
+     sprites[6+player2.fire_counter].movement_type = 2;
+     sprites[6+player2.fire_counter].flag = 0;
+     sprites[6+player2.fire_counter].imglayer.src = p2_fire.src;
+     sprites[6+player2.fire_counter].health = 2;
+     sprites[6+player2.fire_counter].width = 32;
+     sprites[6+player2.fire_counter].height = 32;
+
+    }
+   }
+  
+   if (direction == "left") {
+
+    if (player2.health >= special_health || (round%3 == 0 && round > 0)) {
+    
+     sprites[6+player2.fire_counter].x = player2.x-150
+     sprites[6+player2.fire_counter].y = player2.y-90
+     sprites[6+player2.fire_counter].xdir=-fire_speed;
+     sprites[6+player2.fire_counter].ydir=0;
+     sprites[6+player2.fire_counter].movement_type = 11;
+     sprites[6+player2.fire_counter].flag = 0; 
+     sprites[6+player2.fire_counter].imglayer.src = p2_special.src;
+     sprites[6+player2.fire_counter].width = 300;
+     sprites[6+player2.fire_counter].height = 225;
+     sprites[6+player2.fire_counter].health = 2;
+    
+    }
+
+    else {
+
+     sprites[6+player2.fire_counter].x = player2.x
+     sprites[6+player2.fire_counter].y = player2.y
+     sprites[6+player2.fire_counter].xdir=-fire_speed;
+     sprites[6+player2.fire_counter].ydir=0;
+     sprites[6+player2.fire_counter].movement_type = 2;
+     sprites[6+player2.fire_counter].flag = 0;
+     sprites[6+player2.fire_counter].imglayer.src = p2_fire.src;
+     sprites[6+player2.fire_counter].health = 2;
+     sprites[6+player2.fire_counter].width = 32;
+     sprites[6+player2.fire_counter].height = 32;
+    
+    }
+   }
+
+   if (direction == "right") {
+
+    if (player2.health >= special_health || (round%3 == 0 && round > 0)) {
+    
+     sprites[6+player2.fire_counter].x = player2.x-150
+     sprites[6+player2.fire_counter].y = player2.y-90
+     sprites[6+player2.fire_counter].xdir=fire_speed;
+     sprites[6+player2.fire_counter].ydir=0;
+     sprites[6+player2.fire_counter].movement_type = 11;
+     sprites[6+player2.fire_counter].flag = 0; 
+     sprites[6+player2.fire_counter].imglayer.src = p2_special.src;
+     sprites[6+player2.fire_counter].width = 300;
+     sprites[6+player2.fire_counter].height = 225;
+     sprites[6+player2.fire_counter].health = 2;
+    
+    }
+
+    else {
+
+     sprites[6+player2.fire_counter].x = player2.x
+     sprites[6+player2.fire_counter].y = player2.y
+     sprites[6+player2.fire_counter].xdir=fire_speed;
+     sprites[6+player2.fire_counter].ydir=0;
+     sprites[6+player2.fire_counter].movement_type = 2;
+     sprites[6+player2.fire_counter].flag = 0;
+     sprites[6+player2.fire_counter].imglayer.src = p2_fire.src;
+     sprites[6+player2.fire_counter].health = 2;
+     sprites[6+player2.fire_counter].width = 32;
+     sprites[6+player2.fire_counter].height = 32;
+
+    }
+   }
+
+   if (player2.health < special_health && player2.x > (playfield_width/2)-50) {
+    if (player2.x < (playfield_width/2)+50) {
+     if (player2.y > (playfield_height/2)-50) {
+      if (player2.y < (playfield_height/2)+50) {
+       sprites[6+player2.fire_counter].movement_type = 3;
+       sprites[6+player2.fire_counter].orbit_width = 0;
+       sprites[6+player2.fire_counter].orbit_height = 0;
+       sprites[6+player2.fire_counter].degree=Math.floor(Math.random() * 360); 
+      }
+     }
+    }
+   }
+  }  
+ }
+}
+
+function p2_moveup() {
+
+ player2.y-=player2.ydir;
+ 
+ for (x=10;x<sprite_total;x++) {
+
+  if (collision_check(player2,sprites[x])) { 
+    sprites[x].y-=32;
+  }
+
+   // 2nd layer
+
+   for (y=10;y<sprite_total;y++) {
+    if (y != x) {
+     if (collision_check(sprites[x],sprites[y])) {
+      sprites[y].y-=32;
+
+      // 3rd layer
+
+      for (z=10;z<sprite_total;z++) {
+       if (z != y ) {     
+        if (collision_check(sprites[y],sprites[z])) {
+         sprites[z].y-=32;
+
+         // 4th layer
+         
+         for (a=10;a<sprite_total;a++) {
+          if (a != z) {
+           if (collision_check(sprites[z],sprites[a])) {
+	    sprites[a].y-=32; 
+
+            // 5th layer
+
+            for (b=10;b<sprite_total;b++) {
+             if (b != a) {
+              if (collision_check(sprites[a],sprites[b])) {
+               sprites[b].y-=32;
+
+               // 6th Layer
+               
+               for (c=10;c<sprite_total;c++) {
+                if (c != b) {
+                 if (collision_check(sprites[b],sprites[c])) {
+                  sprites[c].y-=32;
+
+                 }
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+
+ if (collision_check(player2,player1) || player2.y < 0) { player2.y+=player2.ydir; }
+ else { player2.imglayer.src = tank2_up.src; }
+
+}
+
+function p2_movedown() {
+
+ player2.y+=player2.ydir;
+
+ for (x=10;x<sprite_total;x++) {
+  if (collision_check(player2,sprites[x])) { 
+   sprites[x].y+=32;
+
+   // 2nd layer
+
+   for (y=10;y<sprite_total;y++) {
+    if (y != x) {
+     if (collision_check(sprites[x],sprites[y])) {
+      sprites[y].y+=32;
+
+      // 3rd layer
+
+      for (z=10;z<sprite_total;z++) {
+       if (z != y ) {     
+        if (collision_check(sprites[y],sprites[z])) {
+         sprites[z].y+=32;
+
+         // 4th layer
+         
+         for (a=10;a<sprite_total;a++) {
+          if (a != z) {
+           if (collision_check(sprites[z],sprites[a])) {
+	    sprites[a].y+=32; 
+
+            // 5th layer
+
+            for (b=10;b<sprite_total;b++) {
+             if (b != a) {
+              if (collision_check(sprites[a],sprites[b])) {
+               sprites[b].y+=32;
+
+               // 6th Layer
+               
+               for (c=10;c<sprite_total;c++) {
+                if (c != b) {
+                 if (collision_check(sprites[b],sprites[c])) {
+                  sprites[c].y+=32;
+
+                 }
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+
+ if (collision_check(player2,player1) || player2.y+player2.height > playfield_height) { player2.y-=player2.ydir; }
+ else { player2.imglayer.src = tank2_down.src; }
+
+
+}
+
+function p2_moveright() {
+
+ player2.x+=player2.xdir;
+
+ for (x=10;x<sprite_total;x++) {
+  if (collision_check(player2,sprites[x])) { 
+   sprites[x].x+=32; 
+
+   // 2nd layer
+
+   for (y=10;y<sprite_total;y++) {
+    if (y != x) {
+     if (collision_check(sprites[x],sprites[y])) {
+      sprites[y].x+=32; 
+
+      // 3rd layer
+
+      for (z=10;z<sprite_total;z++) {
+       if (z != y ) {     
+        if (collision_check(sprites[y],sprites[z])) {
+         sprites[z].x+=32; 
+
+         // 4th layer
+         
+         for (a=10;a<sprite_total;a++) {
+          if (a != z) {
+           if (collision_check(sprites[z],sprites[a])) {
+	    sprites[a].x+=32;  
+
+            // 5th layer
+
+            for (b=10;b<sprite_total;b++) {
+             if (b != a) {
+              if (collision_check(sprites[a],sprites[b])) {
+               sprites[b].x+=32; 
+
+               // 6th Layer
+               
+               for (c=10;c<sprite_total;c++) {
+                if (c != b) {
+                 if (collision_check(sprites[b],sprites[c])) {
+                  sprites[c].x+=32; 
+
+                 }
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+
+ if (collision_check(player2,player1) || player2.x+player2.width > playfield_width) { player2.x-=player2.xdir; }
+ else { player2.imglayer.src = tank2_right.src; }
+
+}
+
+function p2_moveleft() {
+
+ player2.x-=player2.xdir;
+
+ for (x=10;x<sprite_total;x++) {
+  if (collision_check(player2,sprites[x])) { 
+   sprites[x].x-=32;
+
+   // 2nd layer
+
+   for (y=10;y<sprite_total;y++) {
+    if (y != x) {
+     if (collision_check(sprites[x],sprites[y])) {
+      sprites[y].x-=32; 
+
+      // 3rd layer
+
+      for (z=10;z<sprite_total;z++) {
+       if (z != y ) {     
+        if (collision_check(sprites[y],sprites[z])) {
+         sprites[z].x-=32; 
+
+         // 4th layer
+         
+         for (a=10;a<sprite_total;a++) {
+          if (a != z) {
+           if (collision_check(sprites[z],sprites[a])) {
+	    sprites[a].x-=32;  
+
+            // 5th layer
+
+            for (b=10;b<sprite_total;b++) {
+             if (b != a) {
+              if (collision_check(sprites[a],sprites[b])) {
+               sprites[b].x-=32; 
+
+               // 6th Layer
+               
+               for (c=10;c<sprite_total;c++) {
+                if (c != b) {
+                 if (collision_check(sprites[b],sprites[c])) {
+                  sprites[c].x-=32; 
+
+                 }
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+
+ if (collision_check(player2,player1) || player2.x < 0) { player2.x+=player2.xdir; }
+ else { player2.imglayer.src = tank2_left.src; }
+
+}
+
+
+// ********************************************************
+// ********************************************************
+// ********************************************************
+
+
+function show_sprites() {
+
+ for (x=0;x<sprite_total;x++) {
+
+   if (x > 9) {
+    if (sprites[x].x <= 0) { sprites[x].flag=-1; }
+    if (sprites[x].x >= playfield_width) { sprites[x].flag=-1; }
+    if (sprites[x].y <= 0) { sprites[x].flag=-1; }
+    if (sprites[x].y >= playfield_height) { sprites[x].flag=-1; }
+   }
+   
+   if (sprites[x].flag == -1) { sprites[x].x = -1000; }
+
+   str = "sprite" + x + "";
+
+   document.all[str].style.left = sprites[x].x;
+   document.all[str].style.top = sprites[x].y;
+
+ }
+}
+
+var bg_x = 0;
+
+var clear_overlay=-1;
+
+function animate_sprites() {
+
+ for (x=2;x<sprite_total;x++) {
+
+  // Move in a direction based on xdir and ydir
+
+  if (sprites[x].flag > -1) {
+
+   if (sprites[x].movement_type == 1) {
+
+    sprites[x].degree+=.05;
+    sprites[x].x+=sprites[x].xdir;
+    sprites[x].y+=sprites[x].ydir;
+
+    for (y=10;y<sprite_total;y++) {
+     if (collision_check(sprites[x],sprites[y])) { 
+	  
+       touch_wall();
+       sprites[y].imglayer.src = p1_haswall.src;
+       sprites[y].health--; // Killing the wall? Whaaa?
+       if (sprites[y].health <= 0) { explode_wall(y,player1); }
+
+      clear_sprite(sprites[x])
+      break; 
+     
+     }
+    
+    }
+
+    if (collision_check(sprites[x],player2)) { sprites[x].flag=-1; p2_hit(); }
+
+    if (sprites[x].x < 0) { sprites[x].xdir=-sprites[x].xdir; sprites[x].health--; if (sprites[x].health == 0) { clear_sprite(sprites[x]); }}
+    if (sprites[x].x+sprites[x].width > playfield_width) { sprites[x].xdir=-sprites[x].xdir; sprites[x].health--; if (sprites[x].health == 0) { clear_sprite(sprites[x]); }}
+    if (sprites[x].y+sprites[x].height > playfield_height) { sprites[x].ydir=-sprites[x].ydir; sprites[x].health--; if (sprites[x].health == 0) { clear_sprite(sprites[x]); }}
+    if (sprites[x].y < 0) { sprites[x].ydir=-sprites[x].ydir; sprites[x].health--; if (sprites[x].health == 0) { clear_sprite(sprites[x]); }}
+
+   }
+
+   // PLAYER 2 FIRES
+  
+   if (sprites[x].movement_type == 2) {
+
+    sprites[x].degree+=.05;
+    sprites[x].x+=sprites[x].xdir;
+    sprites[x].y+=sprites[x].ydir;
+
+    for (y=10;y<sprite_total;y++) {
+     if (collision_check(sprites[x],sprites[y])) { 
+    
+      touch_wall();
+      sprites[y].imglayer.src = p2_haswall.src;
+      sprites[y].health--; // Killing the wall? Whaaa?
+      if (sprites[y].health <= 0) { explode_wall(y,player2); }
+
+      clear_sprite(sprites[x])
+      break; 
+     
+     }
+    
+    }
+
+    if (collision_check(sprites[x],player1)) { sprites[x].flag=-1; p1_hit(); }
+
+    if (sprites[x].x < 0) { sprites[x].xdir=-sprites[x].xdir; sprites[x].health--; if (sprites[x].health == 0) { clear_sprite(sprites[x]); }}
+    if (sprites[x].x+sprites[x].width > playfield_width) { sprites[x].xdir=-sprites[x].xdir; sprites[x].health--; if (sprites[x].health == 0) { clear_sprite(sprites[x]); }}
+    if (sprites[x].y+sprites[x].height > playfield_height) { sprites[x].ydir=-sprites[x].ydir; sprites[x].health--; if (sprites[x].health == 0) { clear_sprite(sprites[x]); }}
+    if (sprites[x].y < 0) { sprites[x].ydir=-sprites[x].ydir; sprites[x].health--; if (sprites[x].health == 0) { clear_sprite(sprites[x]); }}
+
+   }
+
+
+ if (sprites[x].movement_type == 3) {
+
+   // Player 2 ORB
+
+   sprites[x].orbit_width+=32;
+   sprites[x].orbit_height+=32;
+   sprites[x].x = Math.cos(sprites[x].degree) * sprites[x].orbit_width + player2.x;
+   sprites[x].y = Math.sin(sprites[x].degree) * sprites[x].orbit_height + player2.y;
+ 
+   for (y=2;y<7;y++) {
+    if (x!=y) {
+     if (collision_check(sprites[x],sprites[y])) {
+      sprites[y].flag=-1;
+      sprites[x].flag=-1;
+     }
+    }
+   }
+
+   for (y=10;y<sprite_total;y++) {
+    if (collision_check(sprites[x],sprites[y])) { 
+    
+      touch_wall();
+      sprites[y].imglayer.src = p2_haswall.src;
+      sprites[y].health--; // Killing the wall? Whaaa?
+      if (sprites[y].health <= 0) { explode_wall(y,player2); }
+
+      clear_sprite(sprites[x])
+      break; 
+     
+     }
+    
+    }
+
+    if (collision_check(sprites[x],player1)) { sprites[x].flag=-1; p1_hit(); }
+
+    if (sprites[x].x < 0) { sprites[x].flag = -1; }
+    if (sprites[x].x+sprites[x].width > playfield_width) { clear_sprite(sprites[x]); }
+    if (sprites[x].y+sprites[x].height > playfield_height) { clear_sprite(sprites[x]); }
+    if (sprites[x].y < 0) { clear_sprite(sprites[x]); }
+
+   }
+
+   if (sprites[x].movement_type == 4) {
+
+   // Player 1 ORB
+
+   sprites[x].orbit_width+=32;
+   sprites[x].orbit_height+=32;
+   sprites[x].x = Math.cos(sprites[x].degree) * sprites[x].orbit_width + player1.x;
+   sprites[x].y = Math.sin(sprites[x].degree) * sprites[x].orbit_height + player1.y;
+
+   for (y=6;y<10;y++) {
+    if (x!=y) {
+     if (collision_check(sprites[x],sprites[y])) {
+      sprites[y].flag=-1;
+      sprites[x].flag=-1;
+     }
+    }
+   }
+
+   for (y=10;y<sprite_total;y++) {
+    if (collision_check(sprites[x],sprites[y])) { 
+    
+      touch_wall();
+      sprites[y].imglayer.src = p1_haswall.src;
+      sprites[y].health--; // Killing the wall? Whaaa?
+      if (sprites[y].health <= 0) { explode_wall(y,player1); }
+
+      clear_sprite(sprites[x])
+      break; 
+     
+     }
+    
+    }
+
+    if (collision_check(sprites[x],player2)) { sprites[x].flag=-1; p2_hit(); }
+
+    if (sprites[x].x < 0) { sprites[x].flag = -1; }
+    if (sprites[x].x+sprites[x].width > playfield_width) { clear_sprite(sprites[x]); }
+    if (sprites[x].y+sprites[x].height > playfield_height) { clear_sprite(sprites[x]); }
+    if (sprites[x].y < 0) { clear_sprite(sprites[x]); }
+
+   }
+
+   if (sprites[x].movement_type == 10) {
+
+    // ----------------------------
+    // BAD BOY! P1 STYLE
+    // ----------------------------
+
+    sprites[x].x+=sprites[x].xdir;
+    sprites[x].y+=sprites[x].ydir;
+
+    for (y=10;y<sprite_total;y++) {
+     if (collision_check(sprites[x],sprites[y])) { 
+    
+      touch_wall();
+      explode_wallBIG(y);
+      break; 
+     
+
+     } 
+    }
+
+    if (collision_check(sprites[x],player2)) { p2_bighit(); }
+
+    if (round%3 != 0 || round == 0) {
+	
+     if (sprites[x].x+sprites[x].width < 0) { sprites[x].flag = -1; }
+     if (sprites[x].x > playfield_width) { clear_sprite(sprites[x]); }
+     if (sprites[x].y > playfield_height) { clear_sprite(sprites[x]); }
+     if (sprites[x].y+sprites[x].height < 0) { clear_sprite(sprites[x]); }
+	 
+	}
+	
+	else {
+	
+	
+     if (sprites[x].x+sprites[x].width < 0) { sprites[x].x = playfield_width; sprites[x].health--; if (sprites[x].health == 0) { clear_sprite(sprites[x]); }}
+     if (sprites[x].x > playfield_width) { sprites[x].x = 0-sprites[x].width; sprites[x].health--; if (sprites[x].health == 0) { clear_sprite(sprites[x]); } }
+     if (sprites[x].y > playfield_height) { sprites[x].y = 0-sprites[x].height; sprites[x].health--; if (sprites[x].health == 0) { clear_sprite(sprites[x]); } }
+     if (sprites[x].y+sprites[x].height < 0) { sprites[x].y = playfield_height; sprites[x].health--; if (sprites[x].health == 0) { clear_sprite(sprites[x]); }}
+	 
+	}
+   }
+
+   if (sprites[x].movement_type == 11) {
+
+    // ----------------------------
+    // BAD BOY! P2 STYLE
+    // ----------------------------
+
+    sprites[x].x+=sprites[x].xdir;
+    sprites[x].y+=sprites[x].ydir;
+
+    for (y=10;y<sprite_total;y++) {
+     if (collision_check(sprites[x],sprites[y])) { 
+    
+      touch_wall();
+      explode_wallBIG(y);
+      break;      
+
+     } 
+    }
+
+    if (collision_check(sprites[x],player1)) { p1_bighit(); }
+
+    if (round%3 != 0 || round == 0) {
+	
+     if (sprites[x].x+sprites[x].width < 0) { sprites[x].flag = -1; }
+     if (sprites[x].x > playfield_width) { clear_sprite(sprites[x]); }
+     if (sprites[x].y > playfield_height) { clear_sprite(sprites[x]); }
+     if (sprites[x].y+sprites[x].height < 0) { clear_sprite(sprites[x]); }
+	 
+	}
+	
+	else {
+	
+	
+     if (sprites[x].x+sprites[x].width < 0) { sprites[x].x = playfield_width; sprites[x].health--; if (sprites[x].health == 0) { clear_sprite(sprites[x]); }}
+     if (sprites[x].x > playfield_width) { sprites[x].x = 0-sprites[x].width; sprites[x].health--; if (sprites[x].health == 0) { clear_sprite(sprites[x]); } }
+     if (sprites[x].y > playfield_height) { sprites[x].y = 0-sprites[x].height; sprites[x].health--; if (sprites[x].health == 0) { clear_sprite(sprites[x]); } }
+     if (sprites[x].y+sprites[x].height < 0) { sprites[x].y = playfield_height; sprites[x].health--; if (sprites[x].health == 0) { clear_sprite(sprites[x]); }}
+	 
+	}
+
+   }
+
+  }
+  
+  else {
+  
+   sprites[x].x = -1000;
+  
+  }
+
+ }
+
+ clear_overlay--;
+ if (clear_overlay == 0) { 
+  document.all.overlay.style.background = "";
+  document.all.spritefield.style.left = 0;
+  document.all.spritefield.style.top = 0;
+ }
+
+}
+
+function explode_wallBIG(y) {
+
+ wall_hit();
+ sprites[y].flag = 20;
+ sprites[y].imglayer.src = "images/explode.gif?" + Math.random() * 10000;
+ setTimeout("clear_sprite(sprites[" + y + "])",500);
+
+}
+
+function explode_wall(y,player) {
+
+  wall_hit();
+  player.health+=10;
+  sprites[y].flag = 20;
+  sprites[y].imglayer.src = "images/explode.gif?" + Math.random() * 10000;
+  setTimeout("clear_sprite(sprites[" + y + "])",500);
+
+}
+
+function clear_sprite(sprite) {
+
+ sprite.flag = -1;
+ sprite.degree = 0;
+
+}
+
+function touch_wall() {
+
+ document.all.spritefield.style.left = -1;
+ document.all.spritefield.style.top = -1;
+ clear_overlay=3;
+
+}
+
+function wall_hit() {
+
+ document.all.spritefield.style.left = 1+Math.floor(Math.random() * 5);
+ document.all.spritefield.style.top =  1+Math.floor(Math.random() * 5);
+ clear_overlay=3;
+
+}
+
+function p1_hit() {
+
+ document.all.overlay.style.background="#0000ff";
+ document.all.spritefield.style.left = -2;
+ document.all.spritefield.style.top = -2;
+ clear_overlay=3;
+
+ player1.imglayer.src = p1_ouch.src;
+ player1.health-=player2.firepower;
+
+}
+
+function p2_hit() {
+
+ document.all.overlay.style.background="#ff0000";
+ document.all.spritefield.style.left = 2;
+ document.all.spritefield.style.top = 2;
+ clear_overlay=3;
+
+ player2.imglayer.src = p2_ouch.src;
+ player2.health-=player1.firepower;
+
+}
+
+function p1_bighit() {
+
+ document.all.overlay.style.background="#ffffff";
+ document.all.spritefield.style.left = -Math.floor(Math.random() * 15);
+ document.all.spritefield.style.top = -Math.floor(Math.random() * 15);
+ clear_overlay=5;
+
+ player1.imglayer.src = p1_ouch.src;
+ player1.health-=Math.floor(player2.firepower/2);
+
+}
+
+function p2_bighit() {
+
+ document.all.overlay.style.background="#ffffff";
+ document.all.spritefield.style.left = Math.floor(Math.random() * 15);
+ document.all.spritefield.style.top = Math.floor(Math.random() * 15);
+ clear_overlay=5;
+
+ player2.imglayer.src = p2_ouch.src;
+ player2.health-=Math.floor(player1.firepower/2);
+
+}
+
+
+var wall_counter = 0;
+
+
+function construct_walls() {
+
+ for (x=10;x<sprite_total;x++) {
+
+  randomizer_x = Math.floor(Math.random() * (playfield_width/32));
+  randomizer_y = Math.floor(Math.random() * (playfield_height/32)); 
+
+  for (y=10;y<sprite_total;y++) { 
+   if (x != y) {
+    if (32*randomizer_x == player1.x || 32*randomizer_x == player2.x || 32*randomizer_y == player1.y || 32*randomizer_y == player2.y) {
+     y=10;
+     randomizer_x = Math.floor(Math.random() * (playfield_width/32));
+     randomizer_y = Math.floor(Math.random() * (playfield_height/32)); 
+    }
+   }
+  }
+
+  sprites[x].flag = 0;
+  sprites[x].x = 32*randomizer_x;
+  sprites[x].y = 32*randomizer_y;
+  sprites[x].imglayer.src = wall.src;
+  sprites[x].health = 5;
+ 
+ }
+
+ for (x=10;x<sprite_total;x++) {
+  for (y=10;y<sprite_total;y++) {
+   if (x!=y) {
+    if (collision_check(sprites[x],sprites[y])) { 
+     sprites[x].y+=32;
+     x=10;
+    }
+   }
+  }
+ }
+}
+
+function build_walls() {
+
+ wall_counter++;
+
+ if (wall_counter == 100) {
+   wall_counter=0;
+   construct_walls();
+ }
+}
+
+function update_scores() {
+
+ document.all.player1.innerHTML = player1.health + "%";
+ document.all.player2.innerHTML = player2.health + "%";
+
+}
+
+function reconstruct_arena() {
+
+ playfield_width = document.body.clientWidth-32;
+ playfield_height = document.body.clientHeight-32*3;
+
+ while (playfield_width % 32 != 0) { playfield_width--; }
+ while (playfield_height % 32 != 0) { playfield_height--; }
+
+
+ document.all.spritefield.style.width = playfield_width;
+ document.all.spritefield.style.height = playfield_height;
+ document.all.overlay.style.top = -playfield_height/40;
+ document.all.overlay2.style.top = -playfield_height/40;
+
+ construct_walls();
+
+}
+
+function new_game() {
+
+round++;
+
+ for (x=2;x<10;x++) {
+  sprites[x].flag=-1; 
+  sprites[x].width = 32;
+  sprites[x].height = 32; 
+ }
+
+ player1.x = Math.floor(Math.random() * playfield_width/32) * 32;
+ player1.y = Math.floor(Math.random() * playfield_height/32) * 32;
+ player1.imglayer.src = tank1_right.src;
+ player1.flag = 0;
+ player1.health = 100;
+
+ player2.flag = 0;
+ player2.x = Math.floor(Math.random() * playfield_width/32) * 32;
+ player2.y = Math.floor(Math.random() * playfield_height/32) * 32;
+ player2.imglayer.src = tank2_right.src;
+ player2.health = 100;
+ 
+ if (round%3 == 0 && round > 0) { player1.health = 500; player2.health = 500; }
+
+ construct_walls();
+
+}
+
+// ------------------------
+// Main Loop
+// ------------------------
+
+var bg_counter = 0;
+
+function main_loop() {
+
+ bg_counter++;
+
+ check_keys();
+ if ((round%3 == 0 && round > 0)) { build_walls(); }
+ animate_sprites();
+ show_sprites();
+ update_scores();
+
+ if (player1.health <= 0) { 
+  document.all.overlay.style.background = "";
+  alert("Player 1 Wins!");
+  new_game();
+ }
+
+ else if (player2.health <= 0) {
+  document.all.overlay.style.background = "";
+  alert("Player 2 Wins!");
+  new_game();
+ }
+
+ key_pressed = -1;
+
+
+ document.all.destructionarea.style.width = 100
+ document.all.destructionarea.style.height = 100
+ document.all.destructionarea.style.top = (playfield_height/2)-50
+ document.all.destructionarea.style.left = (playfield_width/2)-50
+	
+ //document.all.spritefield.style.backgroundPosition = "" + bg_counter + " 0"
+
+}
+
+document.body.onmousedown = get_keys;
+document.body.onkeydown = get_keys;
+
+setInterval("main_loop()", frame_rate);
+
+</script>
+
+</body>
+</html>
