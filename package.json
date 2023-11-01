@@ -1,0 +1,14 @@
+{
+  "name": "tanks",
+  "version": "1.0.0",
+  "description": "A simple JS tanks game I made back somewhere around 2008 - 2010. Game still works, just run this in a browser and you're ready to go!",
+  "main": "index.js",
+  "scripts": {
+    "start": "http-server ."
+  },
+  "author": "Michael Munsue",
+  "license": "ISC",
+  "dependencies": {
+    "http-server": "^14.1.1"
+  }
+}
